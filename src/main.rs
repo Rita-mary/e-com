@@ -302,7 +302,102 @@ async fn delete_product(db: web::Data<Collection<Product>> ,req: HttpRequest, pr
             Ok(HttpResponse::Unauthorized().json("Login required"))
         }
     }
+async fn add_to_cart(db: web::Data<Collection<models::Cart>> , data: web::Json<models::Cart>, req : HttpRequest)-> Result<HttpResponse>{
 
+    let user_id_g = req.extensions().get::<String>().cloned();
+    if let Some(user_id) = user_id_g{
+
+        let cart_item = models::Cart{
+            user_id: user_id,
+            product_id: data.product_id,
+            quantity: data.quantity,
+        };
+        let result = db.insert_one(cart_item, None).await.map_err(actix_web::error::ErrorInternalServerError)?;
+        if result.inserted_id.as_object_id().is_some() {
+            Ok(HttpResponse::Created().json("Product added to cart successfully"))
+        }
+        else{
+            Ok(HttpResponse::InternalServerError().json("Failed to add product to cart"))
+        }
+
+    }
+    else {
+        Ok(HttpResponse::Unauthorized().json("Login required"))
+    }
+
+}
+
+async fn remove_from_cart(db: web::Data<Collection<models::Cart>> , product_id: web::Path<i64>, req : HttpRequest)-> Result<HttpResponse>{
+
+    let user_id_g = req.extensions().get::<String>().cloned();
+    if let Some(user_id) = user_id_g{
+
+        let filter = doc! {
+            "user_id": user_id,
+            "product_id": product_id.into_inner(),
+        };
+        let result = db.delete_one(filter, None).await.map_err(actix_web::error::ErrorInternalServerError)?;
+        if result.deleted_count == 1 {
+            Ok(HttpResponse::Ok().json("Product removed from cart successfully"))
+        }
+        else{
+            Ok(HttpResponse::NotFound().json("Product not found in cart or not owned by the user"))
+        }
+
+    }
+    else {
+        Ok(HttpResponse::Unauthorized().json("Login required"))
+    }
+
+}
+
+async fn add_to_wishlist(db: web::Data<Collection<models::Wishlist>> , data: web::Json<models::Wishlist>, req : HttpRequest)-> Result<HttpResponse>{
+
+    let user_id_g = req.extensions().get::<String>().cloned();
+    if let Some(user_id) = user_id_g{
+
+        let wishlist_item = models::Wishlist{
+            user_id: user_id,
+            product_id: data.product_id,
+        };
+        let result = db.insert_one(wishlist_item, None).await.map_err(actix_web::error::ErrorInternalServerError)?;
+        if result.inserted_id.as_object_id().is_some() {
+            Ok(HttpResponse::Created().json("Product added to wishlist successfully"))
+        }
+        else{
+            Ok(HttpResponse::InternalServerError().json("Failed to add product to wishlist"))
+        }
+
+    }
+    else {
+        Ok(HttpResponse::Unauthorized().json("Login required"))
+    }
+
+}
+
+async fn remove_from_wishlist(db: web::Data<Collection<models::Wishlist>> , product_id: web::Path<i64>, req : HttpRequest)-> Result<HttpResponse>{
+
+    let user_id_g = req.extensions().get::<String>().cloned();
+    if let Some(user_id) = user_id_g{
+
+        let filter = doc! {
+            "user_id": user_id,
+            "product_id": product_id.into_inner(),
+        };
+        let result = db.delete_one(filter, None).await.map_err(actix_web::error::ErrorInternalServerError)?;
+        if result.deleted_count == 1 {
+            Ok(HttpResponse::Ok().json("Product removed from wishlist successfully"))
+        }
+        else{
+            Ok(HttpResponse::NotFound().json("Product not found in wishlist or not owned by the user"))
+        }
+
+    }
+    else {
+        Ok(HttpResponse::Unauthorized().json("Login required"))
+    }
+
+}
 
 
 
@@ -335,6 +430,10 @@ async fn main() -> std::io::Result<()> {
                     .route("/products/{category}", web::get().to(get_products_by_cat))
                     .route("/update_products/{product_id}", web::put().to(update_product))
                     .route("delete_products/{product_id}", web::delete().to(delete_product))
+                    .route("/add_to_cart", web::post().to(add_to_cart))
+                    .route("/remove_from_cart/{product_id}", web::delete().to(remove_from_cart))
+                    .route("/add_to_wishlist", web::post().to(add_to_wishlist))
+                    .route("/remove_from_wishlist/{product_id}", web::delete().to(remove_from_wishlist))
             )
     })
     .bind("127.0.0.1:8080")? // Bind the server to localhost on port 8080

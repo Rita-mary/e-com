@@ -47,3 +47,16 @@ pub struct Product {
     pub description: Option<String>,
     pub category: String,
 }
+
+#[derive(Serialize , Deserialize, Debug)]
+pub struct Cart{
+    pub user_id: String,
+    pub product_id: i64,
+    pub quantity: i32,
+}
+
+#[derive(Serialize , Deserialize, Debug)]
+pub struct Wishlist{
+    pub user_id: String,
+    pub product_id: i64,
+}
